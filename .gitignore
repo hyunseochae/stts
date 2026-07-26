@@ -1,0 +1,66 @@
+# Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Python Cache & Build Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# AI/ML Models, Checkpoints & Weights
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.h5
+*.tflite
+models/
+checkpoints/
+weights/
+.cache/
+
+# Audio / Generated Media Outputs
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+output*/
+results/
+recordings/
+
+# Logs & Temporary Files
+*.log
+logs/
+*.tmp
+*.temp
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,37 @@
+# 베이스 이미지: RTX 5090 (Blackwell) 지원을 위해 CUDA 12.8 런타임 사용
+FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
+
+# 시스템 의존성 설치 (librosa, soundfile 등을 위해 필요)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ffmpeg \
+    libsndfile1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv 설치
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# uv 환경 변수 설정
+ENV UV_PROJECT_ENVIRONMENT=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# 의존성 파일 복사 및 설치
+COPY requirements.txt .
+# 가상환경 생성 및 의존성 설치 (의존성 무시 및 순차 설치)
+RUN uv venv /app/.venv && \
+    uv pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --extra-index-url https://download.pytorch.org/whl/cu128 && \
+    uv pip install chatterbox-tts==0.1.6 --no-deps && \
+    uv pip install aiofiles annotated-doc annotated-types antlr4-python3-runtime anyio audioread brotli catalogue certifi cffi cfgv charset-normalizer click conformer decorator deprecated diffusers distlib einops fastapi ffmpy filelock fsspec future gradio gradio-client groovy h11 hf-xet httpcore httpx huggingface-hub identify idna importlib-metadata jaconv jinja2 joblib lazy-loader librosa llvmlite markdown-it-py markupsafe mdurl ml-dtypes mpmath msgpack networkx nodeenv numba numpy omegaconf onnx orjson packaging pandas pillow platformdirs pooch pre-commit protobuf pycparser pydantic pydantic-core pydub pygments pykakasi pyloudnorm python-dateutil python-multipart pytz pyyaml regex requests resemble-perth rich ruff s3tokenizer safehttpx safetensors scikit-learn scipy semantic-version shellingham six soundfile soxr spacy-pkuseg srsly starlette sympy threadpoolctl tokenizers tomlkit tqdm transformers typer typing-extensions typing-inspection tzdata urllib3 uvicorn virtualenv websockets wrapt zipp setuptools
+
+# 소스 코드 복사
+COPY cli_tts.py .
+
+# 실행 명령어 설정 (가상환경 내 파이썬 사용)
+ENTRYPOINT ["python3", "cli_tts.py"]
+CMD ["안녕하세요. 도커에서 말하는 중입니다."]
