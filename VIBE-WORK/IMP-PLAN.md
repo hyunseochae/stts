@@ -27,18 +27,18 @@
 
 ---
 
-## 🚩 Phase 2: Whisper STT 마이크로서비스 컨테이너 개발 (STT Service)
+## 🚩 Phase 2: Whisper STT 마이크로서비스 컨테이너 개발 (STT Service) - ✅ 완료
 
-- [ ] **2.1 STT 엔진 모듈화 및 FastAPI REST API 개발**
-  - [ ] OpenAI Whisper (`large-v3`, `turbo`) 및 `Faster-Whisper` (CTranslate2) 추론 모듈 구현
-  - [ ] 음성 바이너리(WAV/MP3/PCM) 수신 엔드포인트 작성 (`POST /api/v1/stt`)
-  - [ ] 한국어 인식 강제 옵션(`language='ko'`) 및 VAD (Voice Activity Detection) 필터링 적용
-- [ ] **2.2 STT 출력 데이터 규격화 및 성능 측정**
-  - [ ] 텍스트 결과, 인식 신뢰도, 세그먼트별 타임스탬프 JSON 응답 스키마 정의
-  - [ ] 추론 시간(Inference Latency) 및 메모리 사용량 로그 모니터링 적용
-- [ ] **2.3 STT 전용 Dockerfile 작성 (`Dockerfile.stt`)**
-  - [ ] PyTorch, ffmpeg, Faster-Whisper 포함 독립 이미지 구성을 위한 `Dockerfile.stt` 작성
-  - [ ] STT 헬스체크 엔드포인트 (`GET /health`) 구현
+- [x] **2.1 STT 엔진 모듈화 및 FastAPI REST API 개발**
+  - [x] OpenAI Whisper (`large-v3`, `turbo`) 및 `Faster-Whisper` (CTranslate2) 추론 모듈 구현
+  - [x] 음성 바이너리(WAV/MP3/PCM) 수신 엔드포인트 작성 (`POST /api/v1/stt`)
+  - [x] 한국어 인식 강제 옵션(`language='ko'`) 및 VAD (Voice Activity Detection) 필터링 적용
+- [x] **2.2 STT 출력 데이터 규격화 및 성능 측정**
+  - [x] 텍스트 결과, 인식 신뢰도, 세그먼트별 타임스탬프 JSON 응답 스키마 정의
+  - [x] 추론 시간(Inference Latency) 및 메모리 사용량 로그 모니터링 적용
+- [x] **2.3 STT 전용 Dockerfile 작성 (`docker/image/stt-service/Dockerfile`)**
+  - [x] `docker/image/stt-service/Dockerfile` 작성 (PyTorch, ffmpeg, Faster-Whisper 포함)
+  - [x] `src/stt-service/` 디렉토리에 백엔드 소스코드 전용 구축 완료
 
 ---
 
