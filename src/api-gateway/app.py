@@ -77,7 +77,7 @@ async def process_full_voice_assistant_pipeline(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to communicate with LLM Service: {e}")
 
-        # Step 3: TTS Voice Cloning Request
+        # Step 3: TTS Voice Cloning Request (JSON Body)
         try:
             tts_data = {
                 "text": response_text,
