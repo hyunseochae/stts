@@ -5,9 +5,9 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-STT_SERVICE_URL = os.getenv("STT_SERVICE_URL", "http://stt-service:8001")
-LLM_SERVICE_URL = os.getenv("LLM_SERVICE_URL", "http://llm-service:8002")
-TTS_SERVICE_URL = os.getenv("TTS_SERVICE_URL", "http://tts-service:8003")
+STT_SERVICE_URL = os.getenv("STT_SERVICE_URL", "http://stts-stt-service:8001")
+LLM_SERVICE_URL = os.getenv("LLM_SERVICE_URL", "http://stts-llm-service:8002")
+TTS_SERVICE_URL = os.getenv("TTS_SERVICE_URL", "http://stts-tts-service:8003")
 
 app = FastAPI(
     title="Voice Assistant API Gateway",
