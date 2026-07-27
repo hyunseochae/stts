@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: docker/image/api-gateway/Dockerfile
+    container_name: voice_api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - STT_SERVICE_URL=http://stt-service:8001
+      - LLM_SERVICE_URL=http://llm-service:8002
+      - TTS_SERVICE_URL=http://tts-service:8003
+    depends_on:
+      stt-service:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+      tts-service:
+        condition: service_healthy
+    networks:
+      - voice-assistant-net
+    restart: unless-stopped
+
+  stt-service:
+    build:
+      context: ../..
+      dockerfile: docker/image/stt-service/Dockerfile
+    container_name: voice_stt_service
+    ports:
+      - "8001:8001"
+    environment:
+      - WHISPER_MODEL_SIZE=base
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - voice-assistant-net
+    restart: unless-stopped
+
+  llm-service:
+    build:
+      context: ../..
+      dockerfile: docker/image/llm-service/Dockerfile
+    container_name: voice_llm_service
+    ports:
+      - "8002:8002"
+    networks:
+      - voice-assistant-net
+    restart: unless-stopped
+
+  tts-service:
+    build:
+      context: ../..
+      dockerfile: docker/image/tts-service/Dockerfile
+    container_name: voice_tts_service
+    ports:
+      - "8003:8003"
+    environment:
+      - REF_VOICE_DIR=/app/ref_voices
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ../../src/tts-service/ref_voices:/app/ref_voices
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - voice-assistant-net
+    restart: unless-stopped
+
+networks:
+  voice-assistant-net:
+    driver: bridge

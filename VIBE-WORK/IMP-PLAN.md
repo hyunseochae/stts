@@ -70,19 +70,19 @@
 
 ---
 
-## 🚩 Phase 5: Docker Compose 오케스트레이션 구동 환경 구성 (Docker Compose Setup)
+## 🚩 Phase 5: Docker Compose 오케스트레이션 구동 환경 구성 (Docker Compose Setup) - ✅ 완료
 
-- [ ] **5.1 Docker Compose 설정 파일 작성 (`docker-compose.yml`)**
-  - [ ] `stt-service`, `llm-service`, `tts-service`, `api-gateway` 4개 서비스 정의
-  - [ ] GPU 리소스 할당 구획 명시 (`deploy.resources.reservations.devices` nvidia GPU 설정)
-  - [ ] 컨테이너 간 분리된 내부 프라이빗 브릿지 네트워크 (`voice-assistant-net`) 구축
-  - [ ] 모델 및 참조 음성 데이터 persistence 볼륨 바인딩 (`./models`, `./ref_voices`)
-- [ ] **5.2 환경 변수 및 의존성 헬스체크 설정**
-  - [ ] 서비스 공통 환경 변수 파일 (`.env`) 작성
-  - [ ] 컨테이너 시퀀스 부팅을 위한 `healthcheck` 및 `depends_on: condition: service_healthy` 지정
-- [ ] **5.3 API Gateway (Nginx / FastAPI Router) 오케스트레이션 연동**
-  - [ ] 외부 키오스크 단말 요청 수신 API Gateway 라우팅 설정
-  - [ ] Gateway ➔ STT ➔ LLM ➔ TTS 모듈 간 내부 네트워크 호스트명 통신 라우팅
+- [x] **5.1 Docker Compose 설정 파일 작성 (`docker-compose.yml`)**
+  - [x] `stt-service`, `llm-service`, `tts-service`, `api-gateway` 4개 서비스 정의
+  - [x] GPU 리소스 할당 구획 명시 (`deploy.resources.reservations.devices` nvidia GPU 설정)
+  - [x] 컨테이너 간 분리된 내부 프라이빗 브릿지 네트워크 (`voice-assistant-net`) 구축
+  - [x] 모델 및 참조 음성 데이터 persistence 볼륨 바인딩 (`./src/tts-service/ref_voices`)
+- [x] **5.2 환경 변수 및 의존성 헬스체크 설정**
+  - [x] 서비스 공통 환경 변수 파일 (`.env`) 작성
+  - [x] 컨테이너 시퀀스 부팅을 위한 `healthcheck` 및 `depends_on: condition: service_healthy` 지정
+- [x] **5.3 API Gateway (FastAPI Router) 오케스트레이션 연동**
+  - [x] 외부 키오스크 단말 요청 수신 API Gateway 라우팅 설정 (`POST /api/v1/assistant/chat`)
+  - [x] Gateway ➔ STT ➔ LLM ➔ TTS 모듈 간 내부 네트워크 호스트명 통신 라우팅
 
 ---
 
