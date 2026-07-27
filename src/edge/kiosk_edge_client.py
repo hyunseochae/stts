@@ -54,14 +54,20 @@ def run_kiosk_edge_test(audio_path: str, gateway_url: str, reference_voice_id: s
 
         latency = time.time() - start_time
 
+        from urllib.parse import unquote
+        raw_stt = res.headers.get('X-STT-User-Text', 'N/A')
+        raw_resp = res.headers.get('X-LLM-Response-Text', 'N/A')
+        stt_text = unquote(raw_stt) if raw_stt != 'N/A' else 'N/A'
+        resp_text = unquote(raw_resp) if raw_resp != 'N/A' else 'N/A'
+
         print("\n" + "=" * 65)
         print(" [Kiosk Edge Terminal Response Received] ")
         print("=" * 65)
         print(f" -> Response Status Code     : HTTP {res.status_code}")
         print(f" -> Total Roundtrip Latency  : {latency:.3f} seconds")
-        print(f" -> Recognized STT Text      : {res.headers.get('X-STT-User-Text', 'N/A')}")
+        print(f" -> Recognized STT Text      : {stt_text}")
         print(f" -> Recognized LLM Intent    : {res.headers.get('X-LLM-Intent', 'N/A')}")
-        print(f" -> Generated Response Text  : {res.headers.get('X-LLM-Response-Text', 'N/A')}")
+        print(f" -> Generated Response Text  : {resp_text}")
         print(f" -> Server Processing Time   : {res.headers.get('X-Pipeline-Total-Time', 'N/A')} s")
         print("=" * 65)
 

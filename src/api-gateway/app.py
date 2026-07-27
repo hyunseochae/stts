@@ -90,11 +90,12 @@ async def process_full_voice_assistant_pipeline(
             
             total_pipeline_time = time.time() - start_pipeline
 
+            from urllib.parse import quote
             headers = {
                 "X-Pipeline-Total-Time": str(round(total_pipeline_time, 3)),
-                "X-STT-User-Text": user_text,
+                "X-STT-User-Text": quote(user_text),
                 "X-LLM-Intent": intent,
-                "X-LLM-Response-Text": response_text
+                "X-LLM-Response-Text": quote(response_text)
             }
 
             return StreamingResponse(
