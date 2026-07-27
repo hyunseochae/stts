@@ -56,17 +56,17 @@
 
 ---
 
-## 🚩 Phase 4: Qwen3-TTS 보이스 클로닝 컨테이너 개발 (TTS Service)
+## 🚩 Phase 4: Qwen3-TTS 보이스 클로닝 컨테이너 개발 (TTS Service) - ✅ 완료
 
-- [ ] **4.1 Qwen3-TTS 모델 로딩 및 FastAPI 서버 개발**
-  - [ ] `Qwen3-TTS-12Hz-1.7B` 모델 기반 서빙 엔드포인트 작성 (`POST /api/v1/tts/clone`)
-  - [ ] CUDA 가속 추론 및 FP16/BF16 정밀도 설정
-- [ ] **4.2 In-Context Learning (ICL) 기반 Zero-Shot 보이스 클로닝 구현**
-  - [ ] 점주 및 브랜드 전속 모델의 수 초 분량 참조 음성(Reference Audio) DB 구축
-  - [ ] 텍스트 합성 요청 시 참조 음성을 동적으로 주입하는 ICL 추론 파이프라인 완성
-- [ ] **4.3 TTS 전용 Dockerfile 작성 (`Dockerfile.tts`)**
-  - [ ] Qwen3-TTS, Soundfile, CUDA 의존성 포함 `Dockerfile.tts` 작성
-  - [ ] 독립 컨테이너 빌드 및 GPU 메모리 점유율 검증
+- [x] **4.1 Qwen3-TTS 모델 로딩 및 FastAPI 서버 개발**
+  - [x] `Qwen3-TTS-12Hz-1.7B` 모델 기반 서빙 엔드포인트 작성 (`POST /api/v1/tts/clone`)
+  - [x] CUDA 가속 추론 및 FP16/BF16 정밀도 설정
+- [x] **4.2 In-Context Learning (ICL) 기반 Zero-Shot 보이스 클로닝 구현**
+  - [x] 점주 및 브랜드 전속 모델의 수 초 분량 참조 음성(Reference Audio) DB 구축
+  - [x] 텍스트 합성 요청 시 참조 음성을 동적으로 주입하는 ICL 추론 파이프라인 완성
+- [x] **4.3 TTS 전용 Dockerfile 작성 (`docker/image/tts-service/Dockerfile`)**
+  - [x] `docker/image/tts-service/Dockerfile` 작성 및 독립 이미지 설정 완료
+  - [x] `src/tts-service/` 디렉토리에 백엔드 소스 전용 구축 완료
 
 ---
 
