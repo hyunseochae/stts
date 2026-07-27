@@ -48,7 +48,7 @@ Your task is to analyze the user's spoken input and return a JSON object with:
 
 Examples:
 - Input: "아이스 아메리카노 한 잔 주세요"
-  Output: {"intent": "ORDER", "confidence": 0.98, "parsed_data": {"items": [{"item": "아메리카노", "temperature": "ice", "quantity": 1}]}, "response_text": "아이스 아메리카노 한 잔 주문 접수되었습니다. 결제를 진행해 주세요."}
+  Output: {"intent": "ORDER", "confidence": 0.98, "parsed_data": {"items": [{"item": "아메리카노", "temperature": "ice", "quantity": 1}]}, "response_text": "아이스 아메리카노 한 잔 주문 접수되었습니다. 카드를 결제기에 꽂아주세요."}
 - Input: "인기 메뉴 추천해 줘"
   Output: {"intent": "RECOMMEND", "confidence": 0.95, "parsed_data": {"recommendation_type": "best_seller"}, "response_text": "저희 매장의 시그니처 인기 메뉴는 아이스 연유라떼와 클래식 샌드위치입니다."}
 - Input: "화장실 어디 있어요?"
@@ -59,6 +59,9 @@ Respond strictly in valid JSON format only, without markdown codeblock syntax or
 
 
 async def call_vllm_gptoss_20b(user_text: str) -> tuple[str, float, dict, str]:
+    if not user_text or not user_text.strip():
+        return "GENERAL", 0.50, {"empty_input": True}, "음성이 잘 들리지 않았습니다. 다시 말씀해 주시겠어요?"
+
     prompt_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"User spoken input: '{user_text}'"}
@@ -77,7 +80,6 @@ async def call_vllm_gptoss_20b(user_text: str) -> tuple[str, float, dict, str]:
             res = await client.post(url, json=payload)
             if res.status_code == 200:
                 content = res.json()["choices"][0]["message"]["content"].strip()
-                # Clean markdown format if present
                 if content.startswith("```"):
                     content = content.split("```")[1]
                     if content.startswith("json"):
@@ -92,7 +94,6 @@ async def call_vllm_gptoss_20b(user_text: str) -> tuple[str, float, dict, str]:
         except Exception as e:
             print(f"[vLLM Error] Call to {VLLM_URL} failed: {e}. Falling back to Rule Parser.")
 
-    # Fallback to local rule parser if vLLM call fails or times out
     return "GENERAL", 0.70, {"fallback": True}, f"말씀하신 '{user_text}' 내용 처리해 드리겠습니다."
 
 
@@ -117,16 +118,14 @@ async def health_check():
 
 @app.post("/api/v1/intent", response_model=IntentResponse)
 async def analyze_intent(request: IntentRequest):
-    if not request.user_text or not request.user_text.strip():
-        raise HTTPException(status_code=400, detail="User text is empty.")
-
+    user_text = request.user_text.strip() if request.user_text else ""
     start_time = time.time()
-    intent, confidence, parsed_data, response_text = await call_vllm_gptoss_20b(request.user_text)
+    intent, confidence, parsed_data, response_text = await call_vllm_gptoss_20b(user_text)
     processing_time = time.time() - start_time
 
     return IntentResponse(
         status="success",
-        user_text=request.user_text,
+        user_text=user_text,
         intent=intent,
         confidence=confidence,
         parsed_data=parsed_data,

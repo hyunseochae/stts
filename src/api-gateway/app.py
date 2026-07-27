@@ -1,6 +1,7 @@
 import os
 import time
 import httpx
+from urllib.parse import quote
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -26,7 +27,7 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    health_results = {"gateway": "healthy", "version": "1.0.1-json-fix", "services": {}}
+    health_results = {"gateway": "healthy", "services": {}}
     async with httpx.AsyncClient(timeout=3.0) as client:
         for name, url in [("stt", STT_SERVICE_URL), ("llm", LLM_SERVICE_URL), ("tts", TTS_SERVICE_URL)]:
             try:
@@ -61,21 +62,25 @@ async def process_full_voice_assistant_pipeline(
             stt_res = await client.post(f"{STT_SERVICE_URL}/api/v1/stt", files=files, data=data)
             stt_data = stt_res.json()
             if stt_res.status_code != 200 or stt_data.get("status") != "success":
-                raise HTTPException(status_code=500, detail=f"STT Service Error: {stt_data}")
-            user_text = stt_data["text"]
+                user_text = ""
+            else:
+                user_text = stt_data.get("text", "").strip()
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to communicate with STT Service: {e}")
+            user_text = ""
 
         # Step 2: LLM Intent Request
         try:
             llm_res = await client.post(f"{LLM_SERVICE_URL}/api/v1/intent", json={"user_text": user_text})
             llm_data = llm_res.json()
-            if llm_res.status_code != 200 or llm_data.get("status") != "success":
-                raise HTTPException(status_code=500, detail=f"LLM Service Error: {llm_data}")
-            response_text = llm_data["response_text"]
-            intent = llm_data["intent"]
+            if llm_res.status_code == 200 and llm_data.get("status") == "success":
+                response_text = llm_data.get("response_text", "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요.")
+                intent = llm_data.get("intent", "GENERAL")
+            else:
+                response_text = "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요."
+                intent = "GENERAL"
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to communicate with LLM Service: {e}")
+            response_text = "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요."
+            intent = "GENERAL"
 
         # Step 3: TTS Voice Cloning Request (JSON Body)
         try:
@@ -88,29 +93,22 @@ async def process_full_voice_assistant_pipeline(
             if tts_res.status_code != 200:
                 raise HTTPException(status_code=500, detail="TTS Service synthesis failed.")
             
-            audio_bytes = tts_res.content
             total_pipeline_time = time.time() - start_pipeline
 
-            from urllib.parse import quote
             headers = {
                 "X-Pipeline-Total-Time": str(round(total_pipeline_time, 3)),
-                "X-STT-User-Text": quote(user_text),
+                "X-STT-User-Text": quote(user_text if user_text else "묵음/인식불가"),
                 "X-LLM-Intent": intent,
                 "X-LLM-Response-Text": quote(response_text)
             }
 
-            from fastapi.responses import Response
-            return Response(
-                content=audio_bytes,
+            return StreamingResponse(
+                content=tts_res.aiter_bytes(),
                 media_type="audio/wav",
                 headers=headers
             )
-        except HTTPException:
-            raise
         except Exception as e:
-            import traceback
-            print(f"[API Gateway Error] TTS Step Exception: {traceback.format_exc()}")
-            raise HTTPException(status_code=500, detail=f"Failed to communicate with TTS Service: {type(e).__name__} - {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with TTS Service: {e}")
 
 
 if __name__ == "__main__":
