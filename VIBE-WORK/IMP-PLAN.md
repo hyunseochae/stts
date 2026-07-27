@@ -86,14 +86,14 @@
 
 ---
 
-## 🚩 Phase 6: 단일 명령 전체 실행, 트러블슈팅 & 스케일 아웃 테스트 (Execution & Scaling)
+## 🚩 Phase 6: 단일 명령 전체 실행, 트러블슈팅 & 스케일 아웃 테스트 (Execution & Scaling) - ✅ 최종 완료
 
-- [ ] **6.1 Docker Compose 단일 명령 전체 백엔드 구동**
-  - [ ] `docker compose up --build -d` 단일 명령 실행으로 전체 MSA 수월한 부팅 확인
-  - [ ] `docker compose ps` 및 `docker compose logs -f` 모니터링 체계 점검
-- [ ] **6.2 다중 동시 요청 부하 분산 & 스케일 아웃 테스트**
-  - [ ] STT/TTS 컨테이너 인스턴스 다중 확장 테스트 (`docker compose scale stt-service=2 tts-service=2`)
-  - [ ] API Gateway 로드 밸런싱 정상 동작 검증
-- [ ] **6.3 End-to-End 성능 검증 및 GPU 트러블슈팅**
-  - [ ] 음성 입력 ➔ STT ➔ LLM ➔ TTS ➔ 음성 반환 전체 레이턴시 측정 및 최적화
-  - [ ] RTX 5090 Blackwell 아키텍처 상의 PyTorch/CUDA 라이브러리 충돌 패치 검증
+- [x] **6.1 Docker Compose 단일 명령 전체 백엔드 구동**
+  - [x] `docker compose -f docker/compose/docker-compose.yml up --build -d` 단일 명령 실행으로 전체 MSA 수월한 부팅 확인
+  - [x] `docker compose ps` 및 `docker compose logs -f` 모니터링 체계 점검
+- [x] **6.2 다중 동시 요청 부하 분산 & 스케일 아웃 테스트**
+  - [x] STT/TTS 컨테이너 인스턴스 다중 확장 테스트 (`scale stt-service=2 tts-service=2`)
+  - [x] API Gateway 로드 밸런싱 정상 동작 검증
+- [x] **6.3 End-to-End 성능 검증 및 GPU 트러블슈팅**
+  - [x] 음성 입력 ➔ STT ➔ LLM ➔ TTS ➔ 음성 반환 전체 레이턴시 측정 및 최적화
+  - [x] RTX 5090 Blackwell 아키텍처 상의 PyTorch/CUDA 라이브러리 패치 및 최종 점검 완료
