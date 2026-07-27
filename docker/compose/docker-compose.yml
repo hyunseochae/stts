@@ -44,6 +44,9 @@ services:
     container_name: stts-llm-service
     ports:
       - "8002:8002"
+    environment:
+      - VLLM_URL=http://172.17.0.1:11434/v1
+      - VLLM_MODEL=openai/gpt-oss-20b
     networks:
       - stts-net
     restart: unless-stopped
