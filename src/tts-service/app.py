@@ -81,12 +81,18 @@ async def health_check():
     }
 
 
+class TTSRequest(BaseModel):
+    text: str
+    reference_audio_id: Optional[str] = "default_owner"
+    language: Optional[str] = "ko"
+
+
 @app.post("/api/v1/tts/clone")
-async def clone_voice_and_synthesize(
-    text: str = Form(...),
-    reference_audio_id: str = Form("default_owner"),
-    language: str = Form("ko")
-):
+async def clone_voice_and_synthesize(req: TTSRequest):
+    text = req.text
+    reference_audio_id = req.reference_audio_id or "default_owner"
+    language = req.language or "ko"
+
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Text payload is empty.")
 

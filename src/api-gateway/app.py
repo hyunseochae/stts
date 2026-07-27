@@ -84,7 +84,7 @@ async def process_full_voice_assistant_pipeline(
                 "reference_audio_id": reference_audio_id,
                 "language": language
             }
-            tts_res = await client.post(f"{TTS_SERVICE_URL}/api/v1/tts/clone", data=tts_data)
+            tts_res = await client.post(f"{TTS_SERVICE_URL}/api/v1/tts/clone", json=tts_data)
             if tts_res.status_code != 200:
                 raise HTTPException(status_code=500, detail="TTS Service synthesis failed.")
             
