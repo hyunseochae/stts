@@ -51,6 +51,9 @@ async def process_full_voice_assistant_pipeline(
     3. Response Text -> TTS Service (Cloned Voice WAV Stream)
     """
     start_pipeline = time.time()
+    print("\n" + "=" * 60, flush=True)
+    print(f"[API Gateway] 🚀 Processing New Kiosk Audio Pipeline Request...", flush=True)
+    print("=" * 60, flush=True)
     
     async with httpx.AsyncClient(timeout=60.0) as client:
         # Step 1: STT Request
@@ -66,7 +69,10 @@ async def process_full_voice_assistant_pipeline(
             else:
                 user_text = stt_data.get("text", "").strip()
         except Exception as e:
+            print(f"[API Gateway Error] STT Communication Failed: {e}", flush=True)
             user_text = ""
+
+        print(f"[API Gateway] 🎙️ STT Recognition Output -> User Text: '{user_text}'", flush=True)
 
         # Step 2: LLM Intent Request
         try:
@@ -79,8 +85,11 @@ async def process_full_voice_assistant_pipeline(
                 response_text = "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요."
                 intent = "GENERAL"
         except Exception as e:
+            print(f"[API Gateway Error] LLM Communication Failed: {e}", flush=True)
             response_text = "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요."
             intent = "GENERAL"
+
+        print(f"[API Gateway] 🧠 LLM Analysis -> Intent: '{intent}' | Generated Response: '{response_text}'", flush=True)
 
         # Step 3: TTS Voice Cloning Request (JSON Body)
         try:
@@ -94,6 +103,7 @@ async def process_full_voice_assistant_pipeline(
                 raise HTTPException(status_code=500, detail="TTS Service synthesis failed.")
             
             total_pipeline_time = time.time() - start_pipeline
+            print(f"[API Gateway] 🔊 TTS Audio Streaming Ready (Total Latency: {total_pipeline_time:.2f}s)", flush=True)
 
             headers = {
                 "X-Pipeline-Total-Time": str(round(total_pipeline_time, 3)),
@@ -108,6 +118,7 @@ async def process_full_voice_assistant_pipeline(
                 headers=headers
             )
         except Exception as e:
+            print(f"[API Gateway Error] TTS Communication Failed: {e}", flush=True)
             raise HTTPException(status_code=500, detail=f"Failed to communicate with TTS Service: {e}")
 
 

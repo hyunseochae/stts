@@ -6,3 +6,5 @@ soundfile>=0.12.1
 torch
 torchaudio
 qwen-tts
+gTTS>=2.5.0
+edge-tts>=6.1.9

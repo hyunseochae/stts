@@ -52,7 +52,7 @@ def get_whisper_model(model_size: str = DEFAULT_MODEL_SIZE):
     if cache_key in MODEL_CACHE:
         return MODEL_CACHE[cache_key]
 
-    print(f"[STT Service] Loading Whisper Model '{model_size}' on [{DEVICE}]...")
+    print(f"[STT Service] Loading Whisper Model '{model_size}' on [{DEVICE}]...", flush=True)
     if HAS_FASTER_WHISPER:
         compute_type = "float16" if DEVICE == "cuda" else "int8"
         try:
@@ -60,14 +60,14 @@ def get_whisper_model(model_size: str = DEFAULT_MODEL_SIZE):
             MODEL_CACHE[cache_key] = ("faster", model)
             return ("faster", model)
         except Exception as e:
-            print(f"[STT Service] Faster-Whisper init failed on {DEVICE}: {e}. Falling back to CPU/Official Whisper.")
+            print(f"[STT Service] Faster-Whisper init failed on {DEVICE}: {e}. Falling back to CPU/Official Whisper.", flush=True)
 
     try:
         model = whisper.load_model(model_size, device=DEVICE)
         MODEL_CACHE[cache_key] = ("openai", model)
         return ("openai", model)
     except Exception as e:
-        print(f"[STT Service] OpenAI Whisper init failed on {DEVICE}: {e}. Retrying on CPU.")
+        print(f"[STT Service] OpenAI Whisper init failed on {DEVICE}: {e}. Retrying on CPU.", flush=True)
         model = whisper.load_model(model_size, device="cpu")
         MODEL_CACHE[cache_key] = ("openai_cpu", model)
         return ("openai_cpu", model)
@@ -75,12 +75,12 @@ def get_whisper_model(model_size: str = DEFAULT_MODEL_SIZE):
 
 @app.on_event("startup")
 async def startup_event():
-    print("=" * 60)
-    print(" [STT Service] Starting Whisper STT Microservice ")
-    print(f" - Device : {DEVICE}")
+    print("=" * 60, flush=True)
+    print(" [STT Service] Starting Whisper STT Microservice ", flush=True)
+    print(f" - Device : {DEVICE}", flush=True)
     if DEVICE == "cuda":
-        print(f" - GPU    : {torch.cuda.get_device_name(0)}")
-    print("=" * 60)
+        print(f" - GPU    : {torch.cuda.get_device_name(0)}", flush=True)
+    print("=" * 60, flush=True)
     get_whisper_model(DEFAULT_MODEL_SIZE)
 
 
@@ -149,10 +149,13 @@ async def transcribe_audio(
             detected_lang = language
 
         inference_time = time.time() - start_time
+        final_text = " ".join(full_text).strip()
+
+        print(f"\n[STT Service] 🎙️ Transcribed Audio -> Result STT Text: '{final_text}' (took {inference_time:.2f}s)", flush=True)
 
         return STTResponse(
             status="success",
-            text=" ".join(full_text),
+            text=final_text,
             language=detected_lang,
             inference_time_seconds=round(inference_time, 3),
             compute_device=DEVICE if engine_type != "openai_cpu" else "cpu",
@@ -160,6 +163,7 @@ async def transcribe_audio(
         )
 
     except Exception as e:
+        print(f"[STT Service Error] STT Exception: {e}", flush=True)
         raise HTTPException(status_code=500, detail=f"STT Processing Error: {str(e)}")
 
     finally:

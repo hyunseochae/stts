@@ -9,8 +9,8 @@ from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 import torch
 import soundfile as sf
+from gtts import gTTS
 
-# Try importing Qwen-TTS
 try:
     from qwen_tts import QwenTTS
     HAS_QWEN_TTS = True
@@ -41,30 +41,29 @@ def load_qwen_tts_model():
     if QWEN_MODEL_CACHE is not None:
         return QWEN_MODEL_CACHE
 
-    print(f"[TTS Service] Initializing Qwen3-TTS 1.7B Model on [{DEVICE}]...")
+    print(f"[TTS Service] Initializing Qwen3-TTS 1.7B Model on [{DEVICE}]...", flush=True)
     if HAS_QWEN_TTS:
         try:
-            # Load Qwen3-TTS model
             model = QwenTTS.from_pretrained("Qwen/Qwen3-TTS-12Hz-1.7B", device=DEVICE)
             QWEN_MODEL_CACHE = model
-            print(f"[TTS Service] Qwen3-TTS Model loaded successfully.")
+            print(f"[TTS Service] Qwen3-TTS Model loaded successfully.", flush=True)
             return model
         except Exception as e:
-            print(f"[TTS Service] Warning: Failed to load Qwen3-TTS from pretrained: {e}")
+            print(f"[TTS Service] Warning: Failed to load Qwen3-TTS from pretrained: {e}", flush=True)
     
-    QWEN_MODEL_CACHE = "mock_qwen_engine"
+    QWEN_MODEL_CACHE = "gtts_engine"
     return QWEN_MODEL_CACHE
 
 
 @app.on_event("startup")
 async def startup_event():
-    print("=" * 60)
-    print(" [TTS Service] Starting Qwen3-TTS Voice Cloning Microservice ")
-    print(f" - Device      : {DEVICE}")
+    print("=" * 60, flush=True)
+    print(" [TTS Service] Starting Qwen3-TTS Voice Cloning Microservice ", flush=True)
+    print(f" - Device      : {DEVICE}", flush=True)
     if DEVICE == "cuda":
-        print(f" - GPU         : {torch.cuda.get_device_name(0)}")
-    print(f" - Ref Voice DB: {REF_VOICE_DIR}")
-    print("=" * 60)
+        print(f" - GPU         : {torch.cuda.get_device_name(0)}", flush=True)
+    print(f" - Ref Voice DB: {REF_VOICE_DIR}", flush=True)
+    print("=" * 60, flush=True)
     os.makedirs(REF_VOICE_DIR, exist_ok=True)
     load_qwen_tts_model()
 
@@ -74,7 +73,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "tts-service",
-        "model": "Qwen3-TTS-12Hz-1.7B (Zero-Shot ICL)",
+        "model": "Qwen3-TTS-12Hz-1.7B / gTTS Fallback",
         "device": DEVICE,
         "gpu_available": torch.cuda.is_available(),
         "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
@@ -94,15 +93,14 @@ async def clone_voice_and_synthesize(req: TTSRequest):
     language = req.language or "ko"
 
     if not text or not text.strip():
-        raise HTTPException(status_code=400, detail="Text payload is empty.")
+        text = "음성이 잘 들리지 않았습니다. 다시 말씀해 주세요."
 
+    print(f"\n[TTS Service] 🗣️ Synthesizing Speech for Text: '{text}'", flush=True)
     start_time = time.time()
     
-    # 1. Reference Audio Path check for ICL
     ref_audio_path = os.path.join(REF_VOICE_DIR, f"{reference_audio_id}.wav")
     has_ref_audio = os.path.exists(ref_audio_path)
 
-    # 2. Synthesis execution (Qwen3-TTS ICL Zero-Shot / Fallback Synthesis)
     sample_rate = 24000
     model = load_qwen_tts_model()
 
@@ -113,19 +111,26 @@ async def clone_voice_and_synthesize(req: TTSRequest):
                 ref_audio_path=ref_audio_path if has_ref_audio else None,
                 language=language
             )
+            buf = io.BytesIO()
+            sf.write(buf, audio_data, sample_rate, format="WAV")
+            buf.seek(0)
         else:
-            # High-quality sine waveform simulation for testing pipeline
-            import numpy as np
-            duration = max(1.5, len(text) * 0.15)
-            t = np.linspace(0, duration, int(sample_rate * duration), False)
-            audio_data = 0.5 * np.sin(2 * np.pi * 440 * t)  # 440Hz Tone
+            # High quality Korean Speech via gTTS (Replaces Sine Beep Tone)
+            print(f"[TTS Service] 🎙️ Generating Natural Korean Voice via gTTS Engine...", flush=True)
+            tts = gTTS(text=text, lang='ko')
+            mp3_buf = io.BytesIO()
+            tts.write_to_fp(mp3_buf)
+            mp3_buf.seek(0)
 
-        # 3. Write audio to buffer
-        buf = io.BytesIO()
-        sf.write(buf, audio_data, sample_rate, format="WAV")
-        buf.seek(0)
-        
+            # Convert mp3 buffer to wav format via soundfile/librosa
+            import librosa
+            audio_data, sr = librosa.load(mp3_buf, sr=sample_rate)
+            buf = io.BytesIO()
+            sf.write(buf, audio_data, sample_rate, format="WAV")
+            buf.seek(0)
+
         synth_time = time.time() - start_time
+        print(f"[TTS Service] ✅ Speech Synthesized in {synth_time:.2f}s (Text length: {len(text)})", flush=True)
 
         headers = {
             "X-Inference-Time-Seconds": str(round(synth_time, 3)),
@@ -137,7 +142,8 @@ async def clone_voice_and_synthesize(req: TTSRequest):
         return StreamingResponse(buf, media_type="audio/wav", headers=headers)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Voice Cloning Synthesis Error: {str(e)}")
+        print(f"[TTS Service Error] Synthesis exception: {e}", flush=True)
+        raise HTTPException(status_code=500, detail=f"Voice Synthesis Error: {str(e)}")
 
 
 if __name__ == "__main__":
