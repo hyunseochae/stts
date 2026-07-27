@@ -1,0 +1,9 @@
+torch
+torchaudio
+torchvision
+openai-whisper
+faster-whisper
+transformers
+accelerate
+soundfile
+librosa
