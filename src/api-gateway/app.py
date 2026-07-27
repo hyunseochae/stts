@@ -88,6 +88,7 @@ async def process_full_voice_assistant_pipeline(
             if tts_res.status_code != 200:
                 raise HTTPException(status_code=500, detail="TTS Service synthesis failed.")
             
+            audio_bytes = tts_res.content
             total_pipeline_time = time.time() - start_pipeline
 
             from urllib.parse import quote
@@ -98,13 +99,18 @@ async def process_full_voice_assistant_pipeline(
                 "X-LLM-Response-Text": quote(response_text)
             }
 
-            return StreamingResponse(
-                content=tts_res.aiter_bytes(),
+            from fastapi.responses import Response
+            return Response(
+                content=audio_bytes,
                 media_type="audio/wav",
                 headers=headers
             )
+        except HTTPException:
+            raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to communicate with TTS Service: {e}")
+            import traceback
+            print(f"[API Gateway Error] TTS Step Exception: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with TTS Service: {type(e).__name__} - {e}")
 
 
 if __name__ == "__main__":
