@@ -42,16 +42,17 @@
 
 ---
 
-## 🚩 Phase 3: LLM 의도 파악 & 대화 제어 모듈 개발 (LLM Intent Engine)
+## 🚩 Phase 3: LLM 의도 파악 & 대화 제어 모듈 개발 (LLM Intent Engine) - ✅ 완료
 
-- [ ] **3.1 STT ➔ LLM 연동 파이프라인 설계**
-  - [ ] STT 변환 텍스트 수신 API 작성 (`POST /api/v1/intent`)
-  - [ ] 키오스크 주문 / 메뉴 선택 / 매장 안내 의도(Intent) 파악 프로토콜 정의
-- [ ] **3.2 LLM 응답 텍스트 & TTS 매핑 모듈 구현**
-  - [ ] LLM 파싱 결과 기반의 최종 답변 텍스트 생성
-  - [ ] TTS 모듈로 전달할 텍스트 및 음성 스타일/참조 ID 매핑 JSON 생성
-- [ ] **3.3 LLM 전용 Dockerfile 작성 (`Dockerfile.llm`)**
-  - [ ] 경량 Python 기반 `Dockerfile.llm` 작성 및 컨테이너 독립화
+- [x] **3.1 STT ➔ LLM 연동 파이프라인 설계**
+  - [x] STT 변환 텍스트 수신 API 작성 (`POST /api/v1/intent`)
+  - [x] 키오스크 주문 / 메뉴 선택 / 매장 안내 의도(Intent) 파악 프로토콜 정의
+- [x] **3.2 LLM 응답 텍스트 & TTS 매핑 모듈 구현**
+  - [x] LLM 파싱 결과 기반의 최종 답변 텍스트 생성
+  - [x] TTS 모듈로 전달할 텍스트 및 음성 스타일/참조 ID 매핑 JSON 생성
+- [x] **3.3 LLM 전용 Dockerfile 작성 (`docker/image/llm-service/Dockerfile`)**
+  - [x] `docker/image/llm-service/Dockerfile` 작성 및 컨테이너 독립화
+  - [x] `src/llm-service/` 디렉토리에 소스코드 전용 구축 완료
 
 ---
 
