@@ -53,12 +53,22 @@ def parse_kiosk_intent(text: str) -> tuple[str, float, dict, str]:
         elif "티" in text_clean or "차" in text_clean:
             item = "유자차"
 
-        # Quantity
+        # Quantity parsing using exact patterns to prevent substring false positives (e.g. '세' in '안녕하세요')
         qty = 1
-        if "두" in text_clean or "2" in text_clean:
+        if re.search(r'(두\s*잔|두\s*개|둘|2\s*잔|2\s*개)', text_clean):
             qty = 2
-        elif "세" in text_clean or "3" in text_clean:
+        elif re.search(r'(세\s*잔|세\s*개|셋|3\s*잔|3\s*개)', text_clean):
             qty = 3
+        elif re.search(r'(네\s*잔|네\s*개|넷|4\s*잔|4\s*개)', text_clean):
+            qty = 4
+        elif re.search(r'(다섯\s*잔|다섯\s*개|5\s*잔|5\s*개)', text_clean):
+            qty = 5
+        elif re.search(r'(한\s*잔|한\s*개|하나|1\s*잔|1\s*개)', text_clean):
+            qty = 1
+        else:
+            num_match = re.search(r'(\d+)\s*(잔|개)', text_clean)
+            if num_match:
+                qty = int(num_match.group(1))
 
         parsed = {"items": [{"item": item, "temperature": temp, "quantity": qty}]}
         temp_str = "아이스" if temp == "ice" else "따뜻한"
