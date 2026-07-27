@@ -26,7 +26,7 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    health_results = {"gateway": "healthy", "services": {}}
+    health_results = {"gateway": "healthy", "version": "1.0.1-json-fix", "services": {}}
     async with httpx.AsyncClient(timeout=3.0) as client:
         for name, url in [("stt", STT_SERVICE_URL), ("llm", LLM_SERVICE_URL), ("tts", TTS_SERVICE_URL)]:
             try:
