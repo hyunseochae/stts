@@ -1,0 +1,9 @@
+# Edge Kiosk Voice Assistant Pipeline Requirements
+sounddevice>=0.4.6
+numpy>=1.24.0
+scipy>=1.10.0
+faster-whisper>=1.0.0
+edge-tts>=6.1.9
+requests>=2.31.0
+gTTS>=2.5.0
+pydantic>=2.0.0
