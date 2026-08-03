@@ -19,7 +19,7 @@ class AudioRecorder:
         audio_data = []
         silence_start_time = None
         speech_detected = False
-        silence_threshold = 0.015  # RMS 에너지 임계값 (배경 소음 수준에 따라 조절)
+        silence_threshold = config.VAD_THRESHOLD  # RMS 에너지 임계값
 
         def callback(indata, frames, time_info, status):
             nonlocal silence_start_time, speech_detected

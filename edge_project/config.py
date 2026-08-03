@@ -25,9 +25,9 @@ KIOSK_MENU = [
 # ----------------------------------------------------
 AUDIO_SAMPLE_RATE = 16000
 AUDIO_CHANNELS = 1
-VAD_SILENCE_DURATION = 1.5  # 음성 입력 정지 후 대기 시간 (초)
-VAD_THRESHOLD = 0.5         # VAD 감도
-RECORD_MAX_SECONDS = 10     # 최대 녹음 시간 (초)
+VAD_SILENCE_DURATION = 3.0  # 음성 입력 정지 후 대기 시간 (3초로 늘려서 뜸들여도 안끊김)
+VAD_THRESHOLD = 0.008       # VAD 감도 (낮을수록 작은 목소리도 인식)
+RECORD_MAX_SECONDS = 15     # 최대 녹음 시간 (15초)
 
 INPUT_AUDIO_PATH = str(TEMP_DIR / "input.wav")
 OUTPUT_AUDIO_PATH = str(TEMP_DIR / "output.mp3")
