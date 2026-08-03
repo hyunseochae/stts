@@ -9,17 +9,21 @@ class LLMOrderParser:
         self.engine_type = engine_type
         self.model_name = model_name
         
-        # 자주 발생하는 STT 뭉개짐/오타 직관 사전
+        # 자주 발생하는 STT 뭉개짐/오타 직관 교정 사전
         self.phonetic_dict = {
             "바릴라랍때": "바닐라 라떼",
             "바닐라랍때": "바닐라 라떼",
             "바릴라라떼": "바닐라 라떼",
+            "바닐라라떼": "바닐라 라떼",
             "아이스틱": "아이스티",
-            "초코랄 때": "초코 라떼",
-            "초코랄때": "초코 라떼",
-            "초코라때": "초코 라떼",
+            "초코랫대": "초코 라떼",
+            "초코렛대": "초코 라떼",
+            "초코라대": "초코 라떼",
+            "초코래떼": "초코 라떼",
+            "초코라떼": "초코 라떼",
             "아메리카나": "아메리카노",
-            "레몬에이두": "레몬에이드"
+            "레몬에이두": "레몬에이드",
+            "레몬에이트": "레몬에이드"
         }
         
         self.system_prompt = self._build_system_prompt()
@@ -34,10 +38,9 @@ class LLMOrderParser:
 
 [중요: STT 발음 오류 교정 가이드]
 음성 인식(STT) 특성상 발음이 뭉개지거나 유사한 소리의 텍스트로 인식될 수 있습니다.
-문맥과 유사 발음을 고려하여 가장 가까운 메뉴판의 메뉴로 유연하게 매칭하세요!
 - 예시: '바릴라랍때' -> '바닐라 라떼'
 - 예시: '아이스틱' -> '아이스티'
-- 예시: '초코랄 때' -> '초코 라떼'
+- 예시: '초코랫대', '초코렛대' -> '초코 라떼'
 
 [응답 규칙]
 1. 반드시 아래의 JSON 포맷으로만 응답해야 하며, 그 외의 설명이나 마크다운 백틱(```json 등)은 절대 붙이지 마세요.
@@ -138,9 +141,8 @@ class LLMOrderParser:
 
     def _fallback_rule_parser(self, user_text):
         """
-        N-Gram 퍼지 유사도 기반 향상된 규칙 파서
+        메뉴 직접 매칭 및 위치 기반 정확한 수량 추출 알고리즘
         """
-        num_keywords = {'한', '1', '하나', '일', '두', '2', '둘', '이', '세', '3', '셋', '삼', '네', '4', '넷', '사', '다섯', '5', '오', '개', '잔'}
         num_map = {
             "한": 1, "1": 1, "하나": 1, "일": 1,
             "두": 2, "2": 2, "둘": 2, "이": 2,
@@ -149,56 +151,43 @@ class LLMOrderParser:
             "다섯": 5, "5": 5, "오": 5
         }
 
-        tokens = user_text.split()
-        used_indices = set()
+        text = user_text
         orders = []
 
-        # 2어절 -> 1어절 순서로 메뉴 탐색
-        for length in [2, 1]:
-            for i in range(len(tokens) - length + 1):
-                if any(idx in used_indices for idx in range(i, i + length)):
-                    continue
+        # 메뉴 목록 중 사용자의 텍스트에 포함된 메뉴 찾기
+        for item in config.KIOSK_MENU:
+            item_no_space = item.replace(' ', '')
+            text_no_space = text.replace(' ', '')
 
-                chunk_tokens = tokens[i:i+length]
+            if item in text or item_no_space in text_no_space:
+                qty = 1
+                tokens = text.split()
+                
+                # 해당 메뉴가 위치한 토큰 인덱스 찾기
+                for idx, tok in enumerate(tokens):
+                    clean_tok = re.sub(r'[^\w]', '', tok)
+                    if item_no_space in clean_tok or item.split()[-1] in clean_tok:
+                        # 바로 뒤/앞 토큰 범위에서 수량 단어 탐색
+                        search_scope = tokens[idx:idx+3] + tokens[max(0, idx-1):idx]
+                        
+                        qty_found = False
+                        for s in search_scope:
+                            s_clean = re.sub(r'[^\w]', '', s)
+                            # '주세요'의 '세'가 숫자 3으로 잘못 오인되는 현상 방지
+                            if any(ex in s_clean for ex in ['주세요', '하세요', '에이드', '아이스티', '아메리카노', '라떼']):
+                                continue
 
-                # 2어절 탐색 시 수량 단어(두잔, 3개 등)가 포함되어 있으면 메뉴명 2어절 매칭 스킵
-                if length == 2:
-                    second_tok = re.sub(r'[^\w]', '', chunk_tokens[1])
-                    if any(nk in second_tok for nk in num_keywords):
-                        continue
-
-                chunk = " ".join(chunk_tokens)
-                clean_chunk = re.sub(r'[^\w]', '', chunk)
-
-                matches = difflib.get_close_matches(clean_chunk, config.KIOSK_MENU, n=1, cutoff=0.55)
-                if not matches:
-                    matches = difflib.get_close_matches(chunk, config.KIOSK_MENU, n=1, cutoff=0.55)
-
-                if matches:
-                    item_name = matches[0]
-                    qty = 1
-
-                    # 바로 뒤 또는 앞 어절에서 수량 검색
-                    search_tokens = []
-                    if i + length < len(tokens):
-                        search_tokens.append(tokens[i + length])
-                    if i - 1 >= 0:
-                        search_tokens.append(tokens[i - 1])
-
-                    qty_found = False
-                    for tok in search_tokens:
-                        clean_tok = re.sub(r'[^\w]', '', tok)
-                        for k, v in num_map.items():
-                            if k in clean_tok:
-                                qty = v
-                                qty_found = True
+                            for k, v in num_map.items():
+                                if k in s_clean:
+                                    qty = v
+                                    qty_found = True
+                                    break
+                            if qty_found:
                                 break
                         if qty_found:
                             break
 
-                    orders.append({"item": item_name, "quantity": qty})
-                    for idx in range(i, i + length):
-                        used_indices.add(idx)
+                orders.append({"item": item, "quantity": qty})
 
         if orders:
             summary = ", ".join([f"{o['item']} {o['quantity']}잔" for o in orders])
