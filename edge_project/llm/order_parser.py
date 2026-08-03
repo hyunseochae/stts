@@ -1,5 +1,6 @@
 import json
 import re
+import difflib
 import requests
 import config
 
@@ -7,21 +8,40 @@ class LLMOrderParser:
     def __init__(self, engine_type=config.LLM_ENGINE, model_name=config.LLM_MODEL_NAME):
         self.engine_type = engine_type
         self.model_name = model_name
+        
+        # 자주 발생하는 STT 뭉개짐/오타 직관 사전
+        self.phonetic_dict = {
+            "바릴라랍때": "바닐라 라떼",
+            "바닐라랍때": "바닐라 라떼",
+            "바릴라라떼": "바닐라 라떼",
+            "아이스틱": "아이스티",
+            "초코랄 때": "초코 라떼",
+            "초코랄때": "초코 라떼",
+            "초코라때": "초코 라떼",
+            "아메리카나": "아메리카노",
+            "레몬에이두": "레몬에이드"
+        }
+        
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self):
         menu_str = ", ".join(config.KIOSK_MENU)
-        return f"""당신은 무인 키오스크의 음성 주문 처리 AI 시스템입니다.
-고객이 음성(STT 텍스트)으로 주문하면, 판매 메뉴 목록에서 상품명과 수량을 분석하여 정확한 JSON 데이터로만 응답하세요.
+        return f"""당신은 무인 키오스크의 음성 주문 처리 AI 전문가입니다.
+고객이 음성(STT 텍스트)으로 주문하면, 판매 메뉴 목록에서 해당되는 메뉴와 수량을 정확한 JSON 데이터로 추출하세요.
 
 [판매 메뉴 목록]
 {menu_str}
 
+[중요: STT 발음 오류 교정 가이드]
+음성 인식(STT) 특성상 발음이 뭉개지거나 유사한 소리의 텍스트로 인식될 수 있습니다.
+문맥과 유사 발음을 고려하여 가장 가까운 메뉴판의 메뉴로 유연하게 매칭하세요!
+- 예시: '바릴라랍때' -> '바닐라 라떼'
+- 예시: '아이스틱' -> '아이스티'
+- 예시: '초코랄 때' -> '초코 라떼'
+
 [응답 규칙]
-1. 반드시 아래의 JSON 포맷으로만 응답해야 하며, 그 외의 추가 설명이나 마크다운 백틱(```json 등)은 절대 붙이지 마세요.
-2. 주문 텍스트에서 매칭되는 상품과 정확한 수량을 추출하세요. 메뉴에 없는 항목은 제외하세요.
-3. response_text에는 고객에게 안내할 친절하고 명확한 안내음성 문장을 작성하세요.
-   (예: "아이스 아메리카노 2잔, 아이스 카페라떼 1잔 맞으신가요? 카드리더기에 카드를 꽂아주세요.")
+1. 반드시 아래의 JSON 포맷으로만 응답해야 하며, 그 외의 설명이나 마크다운 백틱(```json 등)은 절대 붙이지 마세요.
+2. response_text에는 고객에게 안내할 친절하고 명확한 안내음성 문장을 작성하세요.
 
 [JSON 출력 형식]
 {{
@@ -42,15 +62,25 @@ class LLMOrderParser:
                 "response_text": "죄송합니다. 음성이 잘 들리지 않았습니다. 다시 말씀해 주시겠어요?"
             }
 
-        print(f"🧠 [LLM] 의도 파악 및 주문 분석 요청중... ({self.engine_type}: {self.model_name})")
+        # 1차: 사전 기반 음성 오타 교정
+        corrected_text = self._correct_stt_text(user_text)
+        print(f"🧠 [LLM] 입력 원문: \"{user_text}\" ➔ 발음 교정: \"{corrected_text}\"")
 
         if self.engine_type == "ollama":
-            return self._call_ollama(user_text)
+            return self._call_ollama(corrected_text)
         elif self.engine_type == "openai_api":
-            return self._call_openai(user_text)
+            return self._call_openai(corrected_text)
         else:
-            # 기본 폴백: 간단한 규칙 기반 파서 (Ollama/API 미구동 시 예시)
-            return self._fallback_rule_parser(user_text)
+            return self._fallback_rule_parser(corrected_text)
+
+    def _correct_stt_text(self, text):
+        """
+        음성 인식 오타 사전 교정
+        """
+        result = text
+        for wrong, right in self.phonetic_dict.items():
+            result = result.replace(wrong, right)
+        return result
 
     def _call_ollama(self, user_text):
         try:
@@ -68,10 +98,8 @@ class LLMOrderParser:
                 content = response.json().get("message", {}).get("content", "")
                 return self._clean_and_parse_json(content)
             else:
-                print(f"⚠️ [Ollama Error] HTTP {response.status_code}. 규칙 기반 폴백을 사용합니다.")
                 return self._fallback_rule_parser(user_text)
-        except Exception as e:
-            print(f"⚠️ [Ollama Error] {e}. 규칙 기반 폴백으로 전환합니다.")
+        except Exception:
             return self._fallback_rule_parser(user_text)
 
     def _call_openai(self, user_text):
@@ -94,8 +122,7 @@ class LLMOrderParser:
                 return self._clean_and_parse_json(content)
             else:
                 return self._fallback_rule_parser(user_text)
-        except Exception as e:
-            print(f"⚠️ [OpenAI API Error] {e}")
+        except Exception:
             return self._fallback_rule_parser(user_text)
 
     def _clean_and_parse_json(self, raw_content):
@@ -104,7 +131,6 @@ class LLMOrderParser:
             data = json.loads(cleaned)
             return data
         except json.JSONDecodeError:
-            print(f"❌ [JSON Parse Error] raw response: {raw_content}")
             return {
                 "orders": [],
                 "response_text": "주문 내용을 정확히 이해하지 못했습니다. 메뉴판을 확인 후 다시 말씀해 주세요."
@@ -112,20 +138,67 @@ class LLMOrderParser:
 
     def _fallback_rule_parser(self, user_text):
         """
-        LLM 서버가 없거나 네트워크 오프라인 상태일 때 작동하는 엣지 폴백 파서
+        N-Gram 퍼지 유사도 기반 향상된 규칙 파서
         """
+        num_keywords = {'한', '1', '하나', '일', '두', '2', '둘', '이', '세', '3', '셋', '삼', '네', '4', '넷', '사', '다섯', '5', '오', '개', '잔'}
+        num_map = {
+            "한": 1, "1": 1, "하나": 1, "일": 1,
+            "두": 2, "2": 2, "둘": 2, "이": 2,
+            "세": 3, "3": 3, "셋": 3, "삼": 3,
+            "네": 4, "4": 4, "넷": 4, "사": 4,
+            "다섯": 5, "5": 5, "오": 5
+        }
+
+        tokens = user_text.split()
+        used_indices = set()
         orders = []
-        # 숫자 키워드 매핑
-        num_map = {"한": 1, "1": 1, "두": 2, "2": 2, "세": 3, "3": 3, "네": 4, "4": 4, "다섯": 5, "5": 5}
-        
-        for item in config.KIOSK_MENU:
-            if item in user_text:
-                qty = 1
-                for k, v in num_map.items():
-                    if f"{item} {k}" in user_text or f"{item} {k}잔" in user_text:
-                        qty = v
-                        break
-                orders.append({"item": item, "quantity": qty})
+
+        # 2어절 -> 1어절 순서로 메뉴 탐색
+        for length in [2, 1]:
+            for i in range(len(tokens) - length + 1):
+                if any(idx in used_indices for idx in range(i, i + length)):
+                    continue
+
+                chunk_tokens = tokens[i:i+length]
+
+                # 2어절 탐색 시 수량 단어(두잔, 3개 등)가 포함되어 있으면 메뉴명 2어절 매칭 스킵
+                if length == 2:
+                    second_tok = re.sub(r'[^\w]', '', chunk_tokens[1])
+                    if any(nk in second_tok for nk in num_keywords):
+                        continue
+
+                chunk = " ".join(chunk_tokens)
+                clean_chunk = re.sub(r'[^\w]', '', chunk)
+
+                matches = difflib.get_close_matches(clean_chunk, config.KIOSK_MENU, n=1, cutoff=0.55)
+                if not matches:
+                    matches = difflib.get_close_matches(chunk, config.KIOSK_MENU, n=1, cutoff=0.55)
+
+                if matches:
+                    item_name = matches[0]
+                    qty = 1
+
+                    # 바로 뒤 또는 앞 어절에서 수량 검색
+                    search_tokens = []
+                    if i + length < len(tokens):
+                        search_tokens.append(tokens[i + length])
+                    if i - 1 >= 0:
+                        search_tokens.append(tokens[i - 1])
+
+                    qty_found = False
+                    for tok in search_tokens:
+                        clean_tok = re.sub(r'[^\w]', '', tok)
+                        for k, v in num_map.items():
+                            if k in clean_tok:
+                                qty = v
+                                qty_found = True
+                                break
+                        if qty_found:
+                            break
+
+                    orders.append({"item": item_name, "quantity": qty})
+                    for idx in range(i, i + length):
+                        used_indices.add(idx)
 
         if orders:
             summary = ", ".join([f"{o['item']} {o['quantity']}잔" for o in orders])
