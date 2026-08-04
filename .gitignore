@@ -49,6 +49,7 @@ weights/
 *.flac
 *.ogg
 *.m4a
+!edge_project/temp/input.wav
 output*/
 results/
 recordings/
