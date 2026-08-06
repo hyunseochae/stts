@@ -91,11 +91,21 @@ class LLMOrderParser:
 
     def _correct_stt_text(self, text):
         """
-        음성 인식 오타 사전 교정
+        음성 인식 오타 사전 및 정규식 패턴 기반 음성 뭉개짐 보정
         """
         result = text
+        
+        # 1. 정규식 패턴 보정 (동적 발음 변형 처리)
+        result = re.sub(r'(바닐라|바릴라|반일라|반일날)\s*(랍|락|랩|라|럭)?\s*(대|때|데|태|어때)', '바닐라 라떼', result)
+        result = re.sub(r'(초코|조코|쵸코)\s*(랍|락|랩|라|랫|렛|래)?\s*(대|때|데|태)', '초코 라떼', result)
+        result = re.sub(r'(아이스|아이)\s*(티|틱|티이)', '아이스티', result)
+        result = re.sub(r'(레몬|래몬)\s*(에이드|에이두|에이트)', '레몬에이드', result)
+        result = re.sub(r'(아메리카노|아메리카나|아메리카누)', '아메리카노', result)
+
+        # 2. 사전 기반 1:1 치환 보정
         for wrong, right in self.phonetic_dict.items():
             result = result.replace(wrong, right)
+            
         return result
 
     def _call_ollama(self, user_text):
