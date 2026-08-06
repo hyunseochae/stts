@@ -164,7 +164,7 @@ class LLMOrderParser:
 
     def _fallback_rule_parser(self, user_text):
         """
-        메뉴 직접 매칭 및 위치 기반 정확한 수량 추출 알고리즘
+        메뉴 직접 매칭 및 위치 기반 정확한 수량 추출 알고리즘 (다중 상품 수량 뒤섞임 방지)
         """
         num_map = {
             "한": 1, "1": 1, "하나": 1, "일": 1,
@@ -173,8 +173,10 @@ class LLMOrderParser:
             "네": 4, "4": 4, "넷": 4, "사": 4,
             "다섯": 5, "5": 5, "오": 5
         }
+        menu_words = {'따뜻한', '아이스', '아메리카노', '카페라떼', '바닐라', '초코', '레몬', '에이드', '라떼', '아이스티', '주세요', '하세요', '부탁합니다'}
 
         text = user_text
+        tokens = text.split()
         orders = []
 
         # 메뉴 목록 중 사용자의 텍스트에 포함된 메뉴 찾기
@@ -184,20 +186,20 @@ class LLMOrderParser:
 
             if item in text or item_no_space in text_no_space:
                 qty = 1
-                tokens = text.split()
+                item_word_count = len(item.split())
+                first_word = item.split()[0]
                 
-                # 해당 메뉴가 위치한 토큰 인덱스 찾기
+                # 첫 번째 대표 단어가 위치한 토큰 인덱스 찾기
                 for idx, tok in enumerate(tokens):
                     clean_tok = re.sub(r'[^\w]', '', tok)
-                    if item_no_space in clean_tok or item.split()[-1] in clean_tok:
-                        # 바로 뒤/앞 토큰 범위에서 수량 단어 탐색
-                        search_scope = tokens[idx:idx+3] + tokens[max(0, idx-1):idx]
-                        
+                    if first_word in clean_tok:
+                        # 메뉴명 바로 뒤의 어절들 위주로 수량 탐색 (이전 상품 수량 혼동 방지)
+                        search_scope = tokens[idx + item_word_count : idx + item_word_count + 2]
                         qty_found = False
                         for s in search_scope:
                             s_clean = re.sub(r'[^\w]', '', s)
-                            # '주세요'의 '세'가 숫자 3으로 잘못 오인되는 현상 방지
-                            if any(ex in s_clean for ex in ['주세요', '하세요', '에이드', '아이스티', '아메리카노', '라떼']):
+                            # 메뉴 단어나 인사말 제외 ('따뜻한'의 '한', '주세요'의 '세' 등 방지)
+                            if any(mw in s_clean for mw in menu_words):
                                 continue
 
                             for k, v in num_map.items():
